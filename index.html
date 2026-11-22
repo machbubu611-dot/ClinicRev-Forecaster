@@ -26,12 +26,18 @@ h1,h2,h3,p{margin:0}
 .top h1{margin-top:6px;font-size:30px;font-weight:700}
 .lead{margin-top:8px;font-size:15px;color:var(--line-soft);max-width:640px}
 .asof{margin-top:6px;font-size:13px;color:var(--soft)}
+.top-actions{display:flex;gap:10px;flex:none}
+.top-actions [hidden]{display:none}
 .ghost-light{flex:none;min-height:44px;padding:0 18px;border-radius:12px;border:1.5px solid #9DB3C4;background:transparent;color:#E3EBF1;font-size:14px;cursor:pointer}
 .pills{display:flex;flex-wrap:wrap;gap:10px}
 .pill{min-height:44px;padding:0 20px;border-radius:999px;border:1.5px solid #9DB3C4;background:transparent;color:#E3EBF1;font-size:15px;font-weight:500;cursor:pointer}
 .pill[aria-pressed="true"]{border-color:var(--card);background:var(--card);color:var(--ink);font-weight:700}
 .banner{background:#E3EBF1;border-bottom:1px solid var(--soft);color:var(--ink);font-size:14px;padding:10px clamp(16px,4vw,56px)}
 .banner p{max-width:1240px;margin:0 auto}
+.lock{max-width:1240px;margin:0 auto;padding:48px clamp(16px,4vw,56px)}
+.lock[hidden]{display:none}
+.lockcard{max-width:420px;padding:24px;display:flex;flex-direction:column;gap:14px}
+.lockcard h2{font-size:20px;font-weight:700}
 .state{max-width:1240px;margin:0 auto;padding:48px clamp(16px,4vw,56px);color:var(--muted);font-size:16px}
 .main{max-width:1240px;width:100%;margin:0 auto;padding:28px clamp(16px,4vw,56px) 48px;display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
 .main[hidden],.state[hidden],.banner[hidden]{display:none}
@@ -120,12 +126,23 @@ dialog::backdrop{background:rgba(43,58,72,.45)}
         <p class="lead">調整下方關鍵指標，看看今年目前為止的累計業績與達成率會變成多少，其他數字會自動連動。</p>
         <p class="asof" id="asof"></p>
       </div>
-      <button type="button" class="ghost-light" id="adminBtn">管理</button>
+      <div class="top-actions">
+        <button type="button" class="ghost-light" id="logoutBtn" hidden>登出</button>
+        <button type="button" class="ghost-light" id="adminBtn">管理</button>
+      </div>
     </div>
     <div class="pills" id="pills" role="group" aria-label="選擇分院"></div>
   </div>
 </header>
 <div class="banner" id="banner" hidden><p id="bannerText"></p></div>
+<section class="lock" id="lock" hidden>
+  <div class="card lockcard">
+    <h2>請輸入進入密碼</h2>
+    <label class="field">進入密碼<input type="password" id="viewPwdIn" autocomplete="current-password"></label>
+    <button type="button" class="btn-primary" id="enterBtn">進入</button>
+    <p class="msg" id="enterMsg"></p>
+  </div>
+</section>
 <div class="state" id="state">資料載入中…</div>
 <main class="main" id="main" hidden>
   <section class="card ctl-card" aria-label="調整關鍵指標">
@@ -157,6 +174,13 @@ dialog::backdrop{background:rgba(43,58,72,.45)}
       <p class="msg" id="lockMsg"></p>
     </div>
     <div id="adminBody" hidden>
+      <div id="adminInit" class="sec" style="border-top:0;padding-top:0" hidden>
+        <h3>初始化網站密碼</h3>
+        <p class="msg">網站目前沒有進入密碼。按下按鈕會建立預設密碼 1234 的空白資料，只有第一次使用需要。建立後請用 1234 進入網站，再開啟管理上傳報表、修改密碼。若您已經改過密碼，請不要按。</p>
+        <div class="actions"><button type="button" class="btn-primary" id="initBtn">建立預設密碼 1234</button></div>
+        <p class="msg" id="initMsg"></p>
+      </div>
+      <div id="adminFull">
       <div class="sec" style="border-top:0;padding-top:0">
         <h3>上傳報表資料</h3>
         <p class="msg">選擇「營運績效報表」檔案（.xls 或 .xlsx），確認內容後發布，所有人重新整理或直接開啟頁面就會看到新資料。</p>
@@ -174,6 +198,14 @@ dialog::backdrop{background:rgba(43,58,72,.45)}
         <p class="msg">按「自動套入年度剩餘人數預估值」時，會排除這些月份，以平常月份的營業日日均推算。</p>
         <div class="actions"><button type="button" class="btn-primary" id="paramSave">儲存參數</button><button type="button" class="btn" id="paramDefault">帶入預設值</button></div>
         <p class="msg" id="paramMsg"></p>
+      </div>
+      <div class="sec">
+        <h3>網站進入密碼</h3>
+        <p class="msg">所有人進入網站都要輸入這組密碼。建議改成 4 到 20 個英文字母或數字，越長越安全。變更後，已登入的人下次需要用新密碼。</p>
+        <label class="field">新的進入密碼<input type="text" id="newPwd" autocomplete="off"></label>
+        <div class="actions"><button type="button" class="btn-primary" id="newPwdBtn">變更進入密碼</button></div>
+        <p class="msg" id="newPwdMsg"></p>
+      </div>
       </div>
     </div>
   </div>

@@ -19,7 +19,8 @@
   var FB_FS = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
   var DAY = 864e5;
 
-  var S = { data: null, params: null, adj: {}, branch: null, status: 'loading', fb: null, pwd: null, parsed: null, banner: '' };
+  var S = { data: null, params: null, adj: {}, branch: null, status: 'loading', fb: null, pwd: null, parsed: null, banner: '', viewPwd: null, unsub: null, dataKey: '' };
+  var imp = (typeof window !== 'undefined' && window.__fbImport) || function (u) { return import(u); };
 
   /* ===== 小工具 ===== */
   var $ = function (s) { return document.querySelector(s); };
@@ -328,6 +329,12 @@
     var banner = $('#banner');
     banner.hidden = !S.banner;
     $('#bannerText').textContent = S.banner;
+    $('#lock').hidden = S.status !== 'locked';
+    $('#logoutBtn').hidden = !S.viewPwd;
+    if (S.status === 'locked') {
+      main.hidden = true; state.hidden = true; $('#pills').innerHTML = ''; $('#asof').textContent = '';
+      return;
+    }
     if (!S.data || !S.data.branches || !S.data.branches.length) {
       main.hidden = true; $('#pills').innerHTML = ''; $('#asof').textContent = '';
       state.hidden = false;
@@ -397,6 +404,41 @@
       return d.getFullYear() + '/' + z(d.getMonth() + 1) + '/' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
     } catch (e) { return ''; }
   }
+  var STORE_KEY = 'clinicrev_view_pwd';
+  function ssGet() { try { return sessionStorage.getItem(STORE_KEY); } catch (e) { return null; } }
+  function ssSet(v) { try { if (v) sessionStorage.setItem(STORE_KEY, v); else sessionStorage.removeItem(STORE_KEY); } catch (e) {} }
+  function vaultRef(pwd) { return S.fb.fs.doc(S.fb.db, 'vault', pwd); }
+  function showLock(msg) {
+    if (S.unsub) { S.unsub(); S.unsub = null; }
+    S.viewPwd = null; S.data = null; S.params = null; S.adj = {}; S.dataKey = ''; S.status = 'locked'; ssSet(null);
+    $('#viewPwdIn').value = ''; setMsg('#enterMsg', msg || '');
+    render(true);
+  }
+  function listen(pwd) {
+    var fs = S.fb.fs;
+    if (S.unsub) S.unsub();
+    S.unsub = fs.onSnapshot(vaultRef(pwd), function (snap) {
+      if (!snap.exists()) { showLock('進入密碼已更新，請重新輸入。'); return; }
+      var v = snap.data() || {}, d = v.data || null;
+      if (d) d.uploadedAtText = stampText(d.uploadedAt);
+      var key = d ? d.asOf + '|' + d.uploadedAtText + '|' + (d.branches || []).length : '';
+      if (key !== S.dataKey) { S.adj = {}; S.dataKey = key; }
+      S.data = d; S.params = v.params || null; S.status = 'ready';
+      render(true);
+    }, function () { S.status = 'error'; S.data = null; render(true); });
+  }
+  async function tryEnter(pwd, silent) {
+    if (!pwd || pwd.indexOf('/') >= 0) { if (!silent) setMsg('#enterMsg', '請輸入進入密碼。', 'err'); return false; }
+    try {
+      var snap = await S.fb.fs.getDoc(vaultRef(pwd));
+      if (!snap.exists()) { if (silent) showLock(); else setMsg('#enterMsg', '密碼錯誤，請再試一次。', 'err'); return false; }
+    } catch (e) {
+      if (silent) showLock(); else setMsg('#enterMsg', '無法連線到雲端，請稍後再試。', 'err');
+      return false;
+    }
+    S.viewPwd = pwd; ssSet(pwd); S.status = 'loading'; render(true); listen(pwd);
+    return true;
+  }
   async function initCloud() {
     if (!configured()) {
       S.data = SEED; S.status = 'ready';
@@ -404,22 +446,12 @@
       render(true); return;
     }
     try {
-      var app = await import(FB_APP), fs = await import(FB_FS);
+      var app = await imp(FB_APP), fs = await imp(FB_FS);
       var db = fs.getFirestore(app.initializeApp(window.FIREBASE_CONFIG));
       S.fb = { fs: fs, db: db };
-      fs.onSnapshot(fs.doc(db, 'pub', 'data'), function (snap) {
-        var d = snap.exists() ? snap.data() : null;
-        if (d) d.uploadedAtText = stampText(d.uploadedAt);
-        S.data = d; S.status = 'ready'; S.adj = {}; S.banner = '';
-        render(true);
-      }, function () { S.status = 'error'; S.data = null; render(true); });
-      fs.onSnapshot(fs.doc(db, 'pub', 'params'), function (snap) {
-        S.params = snap.exists() ? snap.data() : null;
-        if (S.data && S.data.branches) render(true);
-      }, function () {});
-    } catch (e) {
-      S.status = 'error'; render(true);
-    }
+      var saved = ssGet();
+      if (saved) await tryEnter(saved, true); else showLock();
+    } catch (e) { S.status = 'error'; render(true); }
   }
   async function gateBatch(pwd, writes) {
     var fs = S.fb.fs, db = S.fb.db, batch = fs.writeBatch(db);
@@ -442,6 +474,11 @@
     }).join('');
   }
   function fillPeak(useDefault) { $('#peakIn').value = (useDefault ? DEFAULT_PEAK : peakMonths()).join(','); }
+  function openAdminBody() {
+    $('#adminLock').hidden = true; $('#adminBody').hidden = false;
+    $('#adminInit').hidden = !!S.viewPwd; $('#adminFull').hidden = !S.viewPwd;
+    if (S.viewPwd) { fillParams(false); fillPeak(false); }
+  }
   function setMsg(id, text, cls) { var el = $(id); el.textContent = text; el.className = 'msg' + (cls ? ' ' + cls : ''); }
   function localDate(ms) {
     var d = new Date(ms), z = function (x) { return String(x).padStart(2, '0'); };
@@ -470,7 +507,7 @@
     var dlg = $('#adminDlg');
     $('#adminBtn').addEventListener('click', function () {
       if (!S.fb) { alert('尚未連接雲端資料庫（Firebase），請先完成 firebase-config.js 設定。'); return; }
-      if (S.pwd) { $('#adminLock').hidden = true; $('#adminBody').hidden = false; fillParams(false); fillPeak(false); }
+      if (S.pwd) { openAdminBody(); }
       else { $('#adminLock').hidden = false; $('#adminBody').hidden = true; $('#pwd').value = ''; setMsg('#lockMsg', ''); }
       dlg.showModal();
     });
@@ -482,7 +519,7 @@
       try {
         var fs = S.fb.fs;
         await fs.setDoc(fs.doc(S.fb.db, 'gate', pwd), { ts: fs.serverTimestamp() });
-        S.pwd = pwd; $('#adminLock').hidden = true; $('#adminBody').hidden = false; fillParams(false); fillPeak(false);
+        S.pwd = pwd; openAdminBody();
       } catch (e) { setMsg('#lockMsg', '密碼錯誤，或無法連線到雲端。', 'err'); }
     }
     $('#unlockBtn').addEventListener('click', unlock);
@@ -509,11 +546,44 @@
         var payload = { asOf: asOf, fileName: S.parsed.fileName, branches: S.parsed.branches };
         await gateBatch(S.pwd, function (batch, fs, db) {
           payload.uploadedAt = fs.serverTimestamp();
-          batch.set(fs.doc(db, 'pub', 'data'), payload);
+          batch.set(fs.doc(db, 'vault', S.viewPwd), { data: payload }, { merge: true });
         });
         setMsg('#upMsg', '已發布。所有人開啟頁面即可看到新資料。', 'ok');
         $('#publishBtn').disabled = true; S.parsed = null; $('#file').value = '';
       } catch (err) { setMsg('#upMsg', '發布失敗，請確認密碼與雲端規則設定。', 'err'); }
+    });
+    $('#enterBtn').addEventListener('click', function () { tryEnter($('#viewPwdIn').value.trim(), false); });
+    $('#viewPwdIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') tryEnter($('#viewPwdIn').value.trim(), false); });
+    $('#logoutBtn').addEventListener('click', function () { showLock(''); });
+    $('#initBtn').addEventListener('click', async function () {
+      try {
+        var fs = S.fb.fs, ref = fs.doc(S.fb.db, 'vault', '1234');
+        var snap = await fs.getDoc(ref);
+        if (snap.exists()) { setMsg('#initMsg', '預設密碼 1234 已經建立過了。'); return; }
+        await gateBatch(S.pwd, function (batch, f, d) { batch.set(f.doc(d, 'vault', '1234'), { createdAt: f.serverTimestamp() }); });
+        setMsg('#initMsg', '已建立。請關閉管理視窗，用 1234 進入網站，再開啟管理上傳報表。', 'ok');
+      } catch (err) { setMsg('#initMsg', '建立失敗，請確認密碼與雲端規則設定。', 'err'); }
+    });
+    $('#newPwdBtn').addEventListener('click', async function () {
+      var np = $('#newPwd').value.trim();
+      if (!/^[A-Za-z0-9]{4,20}$/.test(np)) { setMsg('#newPwdMsg', '密碼請用 4 到 20 個英文字母或數字。', 'err'); return; }
+      if (np === S.viewPwd) { setMsg('#newPwdMsg', '與目前的進入密碼相同。', 'err'); return; }
+      setMsg('#newPwdMsg', '變更中…');
+      var oldPwd = S.viewPwd;
+      try {
+        var fs = S.fb.fs, db = S.fb.db;
+        var exist = await fs.getDoc(fs.doc(db, 'vault', np));
+        if (exist.exists()) { setMsg('#newPwdMsg', '這組密碼已被使用，請換一組。', 'err'); return; }
+        var cur = await fs.getDoc(vaultRef(oldPwd));
+        var payload = cur.data() || {};
+        if (S.unsub) { S.unsub(); S.unsub = null; }
+        await gateBatch(S.pwd, function (batch, f, d) { batch.set(f.doc(d, 'vault', np), payload); batch.delete(f.doc(d, 'vault', oldPwd)); });
+        S.viewPwd = np; ssSet(np); listen(np); $('#newPwd').value = '';
+        setMsg('#newPwdMsg', '已變更，之後請用新密碼進入網站。', 'ok');
+      } catch (err) {
+        listen(oldPwd);
+        setMsg('#newPwdMsg', '變更失敗，請確認管理密碼與雲端規則設定。', 'err');
+      }
     });
     $('#paramDefault').addEventListener('click', function () { fillParams(true); fillPeak(true); setMsg('#paramMsg', '已帶入預設值，按「儲存參數」才會生效。'); });
     $('#paramSave').addEventListener('click', async function () {
@@ -529,7 +599,7 @@
       peak = peak.filter(function (x, i) { return peak.indexOf(x) === i; }).sort(function (a, b) { return a - b; });
       setMsg('#paramMsg', '儲存中…');
       try {
-        await gateBatch(S.pwd, function (batch, fs, db) { batch.set(fs.doc(db, 'pub', 'params'), { coef: coef, rate: rate, peak: peak, updatedAt: fs.serverTimestamp() }); });
+        await gateBatch(S.pwd, function (batch, fs, db) { batch.set(fs.doc(db, 'vault', S.viewPwd), { params: { coef: coef, rate: rate, peak: peak, updatedAt: fs.serverTimestamp() } }, { merge: true }); });
         setMsg('#paramMsg', '已儲存，所有人的頁面會即時套用。', 'ok');
       } catch (err) { setMsg('#paramMsg', '儲存失敗，請確認密碼與雲端規則設定。', 'err'); }
     });

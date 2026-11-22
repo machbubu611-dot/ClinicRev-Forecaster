@@ -2,13 +2,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 所有人可讀取報表資料與參數；寫入時必須同時通過「閘門」驗證
-    match /pub/{docId} {
-      allow read: if true;
-      allow write: if getAfter(/databases/$(database)/documents/gate/8888).data.ts == request.time;
+    // 資料放在以「進入密碼」命名的文件裡：知道密碼才讀得到，而且無法列出所有文件。
+    // 寫入（上傳報表、改參數、改進入密碼）必須同時通過下方「閘門」驗證。
+    match /vault/{pw} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update, delete: if getAfter(/databases/$(database)/documents/gate/8888).data.ts == request.time;
     }
 
-    // 閘門：文件 ID 就是管理密碼（8888）。要換密碼，把這裡和上方的 8888 一起改掉。
+    // 閘門：文件 ID 就是管理密碼（8888）。要換管理密碼，把這裡和上方的 8888 一起改掉。
     match /gate/{pass} {
       allow read: if false;
       allow create, update: if pass == '8888'
