@@ -56,7 +56,7 @@
       return c;
     }
     var dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
-    return { y: y, m: m, d: d, elapsed: work(t0, t1), remain: work(t1 + DAY, t2), months: (m - 1) + d / dim };
+    return { y: y, m: m, d: d, elapsed: work(t0, t1), remain: work(t1 + DAY, t2), months: (m - 1) + d / dim, weeks: ((t1 - t0) / DAY + 1) / 7 };
   }
 
   /* ===== 計算 ===== */
@@ -304,7 +304,7 @@
     defsOf(m).forEach(function (d) {
       var v = d.get(m.a), bv = d.get(m.base), id = function (p) { return document.getElementById(p + '-' + d.k); };
       id('val').textContent = show(d, v);
-      id('lbl').textContent = d.name + (d.avg ? '（月均 ' + nf(v / m.t.months) + '）' : '');
+      id('lbl').textContent = d.k === 'book' ? '預約數（月平均，週均 ' + nf(v * m.t.months / m.t.weeks) + '）' : d.name + (d.avg ? '（月均 ' + nf(v / m.t.months) + '）' : '');
       id('orig').textContent = '報表目前 ' + show(d, bv);
       var inp = id('ctl'); inp.min = d.min; inp.max = d.max; inp.value = v;
       var txt = '未調整', color = FLAT;
