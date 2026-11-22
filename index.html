@@ -215,6 +215,14 @@ dialog::backdrop{background:rgba(43,58,72,.45)}
         <p class="msg" id="upMsg"></p>
       </div>
       <div class="sec">
+        <h3>上傳金牌信任榜（人員總服務人次）</h3>
+        <p class="msg">選擇「金牌信任榜」檔案（.xlsx）。系統以「分院＋姓名」對應報表裡的同仁，只讀取「總服務人次」欄位，作為個人數據的服務人次，取代用來客數回推的估計。</p>
+        <label class="field">金牌信任榜檔案<input type="file" id="goldFile" accept=".xlsx,.xls"></label>
+        <div id="goldPreview" class="msg"></div>
+        <div class="actions"><button type="button" class="btn-primary" id="goldPublish" disabled>發布服務人次資料</button></div>
+        <p class="msg" id="goldMsg"></p>
+      </div>
+      <div class="sec">
         <h3>推估參數</h3>
         <p class="msg">服務人次 = 到店來客數 ÷ 係數；預約數 = 服務人次 ÷ 到店率。填入百分比數字（例如 30 代表 30%）。</p>
         <table class="ptable"><thead><tr><th>分院</th><th>人次推估係數 %</th><th>到店率 %</th></tr></thead><tbody id="ptbody"></tbody></table>
@@ -238,6 +246,6 @@ dialog::backdrop{background:rgba(43,58,72,.45)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="firebase-config.js"></script>
 <p class="ver" id="ver"></p>
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>
