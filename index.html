@@ -167,9 +167,11 @@ dialog::backdrop{background:rgba(43,58,72,.45)}
         <p class="msg" id="upMsg"></p>
       </div>
       <div class="sec">
-        <h3>到店人次推估係數與到店率</h3>
+        <h3>推估參數</h3>
         <p class="msg">服務人次 = 到店來客數 ÷ 係數；預約數 = 服務人次 ÷ 到店率。填入百分比數字（例如 30 代表 30%）。</p>
         <table class="ptable"><thead><tr><th>分院</th><th>人次推估係數 %</th><th>到店率 %</th></tr></thead><tbody id="ptbody"></tbody></table>
+        <label class="field">大檔期月份（用逗號分隔，例如 5,10）<input type="text" id="peakIn" inputmode="numeric" autocomplete="off"></label>
+        <p class="msg">按「自動套入年度剩餘人數預估值」時，會排除這些月份，以平常月份的營業日日均推算。</p>
         <div class="actions"><button type="button" class="btn-primary" id="paramSave">儲存參數</button><button type="button" class="btn" id="paramDefault">帶入預設值</button></div>
         <p class="msg" id="paramMsg"></p>
       </div>
