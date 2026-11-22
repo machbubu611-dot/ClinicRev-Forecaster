@@ -18,6 +18,7 @@
   var FB_APP = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
   var FB_FS = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
   var DAY = 864e5;
+  var APP_VERSION = 'v6（進入密碼版）';
 
   var S = { data: null, params: null, adj: {}, branch: null, status: 'loading', fb: null, pwd: null, parsed: null, banner: '', viewPwd: null, unsub: null, dataKey: '' };
   var imp = (typeof window !== 'undefined' && window.__fbImport) || function (u) { return import(u); };
@@ -486,6 +487,7 @@
   }
 
   function bind() {
+    $('#ver').textContent = '程式版本 ' + APP_VERSION;
     $('#pills').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-name]'); if (!b) return;
       S.branch = b.dataset.name; renderPills(); buildControls(); update();
