@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分院年度營收推算器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EEF2; --card:#F6F8FA; --line:#D3DDE5; --line-soft:#DCE5EC;
+  --ink:#2B3A48; --muted:#556677; --deep:#3F5A70; --mid:#7C9BB2; --soft:#C9D6E0; --track:#D9E3EA;
+  --btn-bg:#EEF2F6; --btn-line:#B9C9D6; --up:#3F7078; --down:#8C5E4B;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;line-height:1.5}
+button,input{font-family:inherit}
+button:focus-visible,input:focus-visible,dialog:focus-visible{outline:3px solid var(--deep);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+.top{background:var(--deep);color:#F4F7F9;padding:32px clamp(16px,4vw,56px) 28px}
+.top-in{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.kicker{font-size:13px;letter-spacing:.14em;color:var(--soft)}
+.top h1{margin-top:6px;font-size:30px;font-weight:700}
+.lead{margin-top:8px;font-size:15px;color:var(--line-soft);max-width:640px}
+.asof{margin-top:6px;font-size:13px;color:var(--soft)}
+.ghost-light{flex:none;min-height:44px;padding:0 18px;border-radius:12px;border:1.5px solid #9DB3C4;background:transparent;color:#E3EBF1;font-size:14px;cursor:pointer}
+.pills{display:flex;flex-wrap:wrap;gap:10px}
+.pill{min-height:44px;padding:0 20px;border-radius:999px;border:1.5px solid #9DB3C4;background:transparent;color:#E3EBF1;font-size:15px;font-weight:500;cursor:pointer}
+.pill[aria-pressed="true"]{border-color:var(--card);background:var(--card);color:var(--ink);font-weight:700}
+.banner{background:#E3EBF1;border-bottom:1px solid var(--soft);color:var(--ink);font-size:14px;padding:10px clamp(16px,4vw,56px)}
+.banner p{max-width:1240px;margin:0 auto}
+.state{max-width:1240px;margin:0 auto;padding:48px clamp(16px,4vw,56px);color:var(--muted);font-size:16px}
+.main{max-width:1240px;width:100%;margin:0 auto;padding:28px clamp(16px,4vw,56px) 48px;display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.main[hidden],.state[hidden],.banner[hidden]{display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px}
+.ctl-card{flex:1 1 360px;max-width:460px;min-width:0;padding:22px 22px 8px}
+.ctl-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:14px}
+.ctl-head h2{font-size:18px;font-weight:700}
+.sub{font-size:13px;color:var(--muted)}
+.btn{min-height:44px;padding:0 18px;border-radius:12px;border:1px solid var(--btn-line);background:var(--btn-bg);color:var(--deep);font-size:14px;font-weight:500;cursor:pointer}
+.btn-primary{width:100%;min-height:48px;padding:8px 16px;border:0;background:var(--deep);color:#F6F8FA;font-size:15px;font-weight:700;border-radius:12px;cursor:pointer}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.forecast{display:flex;flex-direction:column;gap:8px;padding-bottom:18px}
+.ctl{padding:16px 0 18px;border-top:1px solid var(--line-soft);display:flex;flex-direction:column;gap:8px}
+.ctl-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ctl-top label{font-size:15px;font-weight:600}
+.tag-adj{font-size:12px;color:var(--deep);background:var(--line-soft);border-radius:999px;padding:2px 10px}
+.ctl-val{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.step{width:44px;height:44px;flex:none;border-radius:12px;border:1px solid var(--btn-line);background:var(--btn-bg);color:var(--deep);font-size:22px;line-height:1;cursor:pointer}
+.val{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;text-align:center;min-width:0}
+.ctl input[type=range]{width:100%;height:44px;margin:0;accent-color:var(--deep)}
+.note{font-size:13px;color:var(--muted)}
+.ctl-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+.ctl-foot .o{color:var(--muted)}
+.chip{font-weight:600;background:#E3EBF1;border-radius:999px;padding:2px 12px}
+.results{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:18px}
+.row{display:flex;flex-wrap:wrap;gap:18px}
+.kpi{flex:1 1 260px;min-width:0;padding:22px;display:flex;flex-direction:column;gap:8px}
+.kpi .label{font-size:14px;font-weight:600;color:var(--muted)}
+.kpi .big{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .small{font-size:14px;color:var(--muted)}
+.kpi .small13{font-size:13px;color:var(--muted)}
+.kpi .status{font-size:14px;font-weight:600;color:var(--deep)}
+.kchip{align-self:flex-start;font-size:13px;font-weight:600;background:#E3EBF1;border-radius:999px;padding:3px 12px}
+.bar{position:relative;height:14px;border-radius:999px;background:var(--track);margin:6px 0 2px}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--deep)}
+.bar .orig{position:absolute;top:-4px;bottom:-4px;width:2px;background:#8FA6B8}
+.bar .goal{position:absolute;top:-6px;bottom:-6px;width:0;border-left:2px dashed var(--ink)}
+.mini{flex:1 1 170px;min-width:0;padding:16px 18px;display:flex;flex-direction:column;gap:4px}
+.mini .label{font-size:13px;font-weight:600;color:var(--muted)}
+.mini .num{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.mini .foot{font-size:13px;color:var(--muted)}
+.panel{padding:22px;display:flex;flex-direction:column;gap:12px}
+.panel h2{font-size:17px;font-weight:700}
+.comp{display:flex;height:30px;border-radius:10px;overflow:hidden;background:var(--track)}
+.comp .n{background:var(--mid)}.comp .o{background:var(--deep);flex-grow:1}
+.legend{display:flex;flex-wrap:wrap;gap:12px 32px;font-size:14px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px}
+.tablewrap{overflow-x:auto}
+.tbl{min-width:520px}
+.tr{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr));gap:8px;padding:10px 0;border-bottom:1px solid var(--line-soft);font-size:14px;align-items:center;font-variant-numeric:tabular-nums}
+.tr.th{padding:8px 0;border-bottom:2px solid var(--soft);font-size:13px;font-weight:600;color:var(--muted)}
+.tr .r{text-align:right}
+.lbl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.t{font-size:11px;border-radius:999px;padding:1px 8px}
+.t-adj{color:var(--deep);background:var(--line-soft)}
+.t-link{color:var(--muted);background:var(--bg)}
+.t-fix{color:var(--muted);border:1px solid var(--soft);padding:0 8px}
+dialog{width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px);border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);padding:0}
+dialog::backdrop{background:rgba(43,58,72,.45)}
+.dlg{padding:22px;display:flex;flex-direction:column;gap:18px}
+.dlg-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.dlg h2{font-size:18px;font-weight:700}
+.dlg h3{font-size:16px;font-weight:700}
+.sec{border-top:1px solid var(--line-soft);padding-top:16px;display:flex;flex-direction:column;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
+.field input{min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--btn-line);background:#fff;color:var(--ink);font-size:16px;font-weight:400}
+.msg{font-size:14px;color:var(--muted)}
+.msg.err{color:var(--down);font-weight:600}
+.msg.ok{color:var(--up);font-weight:600}
+.ptable{width:100%;border-collapse:collapse;font-size:14px}
+.ptable th{font-weight:600;text-align:left;color:var(--muted);padding:6px 6px 6px 0}
+.ptable td{padding:4px 6px 4px 0}
+.ptable input{width:100%;min-height:40px;padding:0 10px;border-radius:10px;border:1px solid var(--btn-line);background:#fff;font-size:15px}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.actions .btn,.actions .btn-primary{width:auto;flex:1 1 160px}
+@media (prefers-reduced-motion:no-preference){.bar .fill{transition:width .2s ease}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="top-row">
+      <div>
+        <p class="kicker">美加醫美 · 營運績效報表</p>
+        <h1>分院年度營收推算器</h1>
+        <p class="lead">調整下方關鍵指標，看看今年目前為止的累計業績與達成率會變成多少，其他數字會自動連動。</p>
+        <p class="asof" id="asof"></p>
+      </div>
+      <button type="button" class="ghost-light" id="adminBtn">管理</button>
+    </div>
+    <div class="pills" id="pills" role="group" aria-label="選擇分院"></div>
+  </div>
+</header>
+<div class="banner" id="banner" hidden><p id="bannerText"></p></div>
+<div class="state" id="state">資料載入中…</div>
+<main class="main" id="main" hidden>
+  <section class="card ctl-card" aria-label="調整關鍵指標">
+    <div class="ctl-head">
+      <div>
+        <h2>調整關鍵指標</h2>
+        <p class="sub">年度欄位的人數為全年不重複人數；調整到店新客數時，到店來客數會同步增減（舊客數不變）</p>
+      </div>
+      <button type="button" class="btn" id="resetBtn">還原全部</button>
+    </div>
+    <div class="forecast">
+      <button type="button" class="btn-primary" id="forecastBtn">自動套入年度剩餘人數預估值</button>
+      <p class="sub" id="forecastText"></p>
+    </div>
+    <div id="controls"></div>
+  </section>
+  <section class="results" id="results" aria-label="推算結果"></section>
+</main>
+
+<dialog id="adminDlg" aria-labelledby="adminTitle">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h2 id="adminTitle">管理</h2>
+      <button type="button" class="btn" id="adminClose">關閉</button>
+    </div>
+    <div id="adminLock" class="sec" style="border-top:0;padding-top:0">
+      <label class="field">管理密碼<input type="password" id="pwd" autocomplete="off" inputmode="numeric"></label>
+      <div class="actions"><button type="button" class="btn-primary" id="unlockBtn">解鎖</button></div>
+      <p class="msg" id="lockMsg"></p>
+    </div>
+    <div id="adminBody" hidden>
+      <div class="sec" style="border-top:0;padding-top:0">
+        <h3>上傳報表資料</h3>
+        <p class="msg">選擇「營運績效報表」檔案（.xls 或 .xlsx），確認內容後發布，所有人重新整理或直接開啟頁面就會看到新資料。</p>
+        <label class="field">報表檔案<input type="file" id="file" accept=".xls,.xlsx"></label>
+        <label class="field">資料截至日期<input type="date" id="upAsOf"></label>
+        <div id="upPreview" class="msg"></div>
+        <div class="actions"><button type="button" class="btn-primary" id="publishBtn" disabled>發布給所有人</button></div>
+        <p class="msg" id="upMsg"></p>
+      </div>
+      <div class="sec">
+        <h3>到店人次推估係數與到店率</h3>
+        <p class="msg">服務人次 = 到店來客數 ÷ 係數；預約數 = 服務人次 ÷ 到店率。填入百分比數字（例如 30 代表 30%）。</p>
+        <table class="ptable"><thead><tr><th>分院</th><th>人次推估係數 %</th><th>到店率 %</th></tr></thead><tbody id="ptbody"></tbody></table>
+        <div class="actions"><button type="button" class="btn-primary" id="paramSave">儲存參數</button><button type="button" class="btn" id="paramDefault">帶入預設值</button></div>
+        <p class="msg" id="paramMsg"></p>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

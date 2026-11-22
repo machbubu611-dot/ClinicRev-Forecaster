@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 所有人可讀取報表資料與參數；寫入時必須同時通過「閘門」驗證
+    match /pub/{docId} {
+      allow read: if true;
+      allow write: if getAfter(/databases/$(database)/documents/gate/8888).data.ts == request.time;
+    }
+
+    // 閘門：文件 ID 就是管理密碼（8888）。要換密碼，把這裡和上方的 8888 一起改掉。
+    match /gate/{pass} {
+      allow read: if false;
+      allow create, update: if pass == '8888'
+        && request.resource.data.keys().hasOnly(['ts'])
+        && request.resource.data.ts == request.time;
+    }
+  }
+}
